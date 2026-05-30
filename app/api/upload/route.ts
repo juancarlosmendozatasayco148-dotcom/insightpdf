@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import path from "path";
-
-try {
-  const workerPath = path.join(
-    process.cwd(),
-    "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
-  );
-  pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
-} catch {
-  console.warn("Could not set pdfjs worker path");
-}
+import PDFParser from "pdf2json";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,28 +25,35 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const data = new Uint8Array(bytes);
+    const buffer = Buffer.from(bytes);
 
     let text: string;
-    let pageCount = 0;
     try {
-      const loadingTask = pdfjs.getDocument({ data });
-      const doc = await loadingTask.promise;
-      pageCount = doc.numPages;
+      text = await new Promise<string>((resolve, reject) => {
+        const parser = new PDFParser();
 
-      const textParts: string[] = [];
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        const pageText = content.items
-          .filter((item) => "str" in item)
-          .map((item) => (item as { str: string }).str)
-          .join(" ");
-        textParts.push(pageText);
-      }
+        parser.on("pdfParser_dataReady", () => {
+          try {
+            const rawText = parser.getRawTextContent();
+            parser.destroy();
+            resolve(rawText);
+          } catch (err) {
+            parser.destroy();
+            reject(err);
+          }
+        });
 
-      text = textParts.join("\n");
-      await doc.destroy();
+        parser.on("pdfParser_dataError", (errData: unknown) => {
+          parser.destroy();
+          const msg =
+            errData && typeof errData === "object" && "parserError" in errData
+              ? String((errData as { parserError: Error }).parserError)
+              : "Error al procesar el PDF";
+          reject(new Error(msg));
+        });
+
+        parser.parseBuffer(buffer);
+      });
     } catch (err) {
       console.error("PDF parse error:", err);
       return NextResponse.json(
@@ -83,7 +79,6 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       text,
-      pageCount,
     });
   } catch (error) {
     console.error("Upload error:", error);
