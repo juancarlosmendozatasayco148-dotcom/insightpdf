@@ -60,10 +60,9 @@ export async function POST(request: NextRequest) {
 
 async function extractWithUnpdf(data: Uint8Array): Promise<string | null> {
   try {
-    const { text: pages } = await extractText(data, { mergePages: true });
-    if (!pages) return null;
-    const t = typeof pages === "string" ? pages : Array.isArray(pages) ? pages.join("\n") : String(pages);
-    return t.trim().length >= 10 ? t : null;
+    const { text } = await extractText(data, { mergePages: true });
+    if (!text) return null;
+    return text.trim().length >= 10 ? text : null;
   } catch (err) {
     console.log("unpdf extraction failed, will try Gemini fallback:", (err as Error).message);
     return null;
