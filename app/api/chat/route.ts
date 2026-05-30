@@ -17,7 +17,14 @@ function getChatSystemPrompt(documentText: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (parseErr: any) {
+      console.error("Chat body parse error:", parseErr.message, "raw:", rawBody.slice(0, 300));
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
     const { documentText, message, history = [] } = body;
 
     if (!documentText || !message) {
