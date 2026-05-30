@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import path from "path";
 
-pdfjs.GlobalWorkerOptions.workerSrc =
-  "pdfjs-dist/legacy/build/pdf.worker.mjs";
+try {
+  const workerPath = path.join(
+    process.cwd(),
+    "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
+  );
+  pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
+} catch {
+  console.warn("Could not set pdfjs worker path");
+}
 
 export async function POST(request: NextRequest) {
   try {
