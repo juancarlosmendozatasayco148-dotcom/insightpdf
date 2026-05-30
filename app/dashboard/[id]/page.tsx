@@ -1,108 +1,63 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Chat from "@/components/chat";
 import InsightsPanel from "@/components/insights-panel";
 
-export default function DashboardPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const searchParams = useSearchParams();
-  const fileName = searchParams.get("fileName") || "Documento";
-  const fileUrl = searchParams.get("fileUrl") || "";
+interface DocData {
+  fileName: string;
+  text: string;
+}
 
-  const [documentText, setDocumentText] = useState<string | null>(null);
+export default function DashboardPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const [docData, setDocData] = useState<DocData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"chat" | "insights">("chat");
 
   useEffect(() => {
-    async function extractText() {
-      try {
-        const res = await fetch("/api/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileUrl }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Error al extraer texto");
-        }
-
-        setDocumentText(data.text);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Error al procesar el documento"
-        );
-      } finally {
-        setLoading(false);
+    try {
+      const stored = sessionStorage.getItem(`doc_${id}`);
+      if (!stored) {
+        router.replace("/");
+        return;
       }
-    }
-
-    if (fileUrl) {
-      extractText();
-    } else {
+      setDocData(JSON.parse(stored));
+    } catch {
+      router.replace("/");
+    } finally {
       setLoading(false);
-      setError("No se encontró el archivo.");
     }
-  }, [fileUrl]);
+  }, [id, router]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="w-12 h-12 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-sm text-zinc-500">
-            Extrayendo texto del documento...
-          </p>
-          <p className="mt-1 text-xs text-zinc-400">
-            Esto puede tomar unos segundos
-          </p>
+          <div className="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-sm text-zinc-500">Cargando documento...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-6 h-6 text-red-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-lg font-semibold text-zinc-900 mb-2">
-            Error al procesar
-          </h2>
-          <p className="text-sm text-zinc-500">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  if (!docData) return null;
+
+  const textPreview =
+    docData.text.length > 1500
+      ? docData.text.slice(0, 1500) + "..."
+      : docData.text;
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      <header className="border-b border-zinc-200 px-6 h-14 flex items-center justify-between shrink-0">
+      <header className="border-b border-zinc-200 px-6 h-14 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center gap-3 min-w-0">
-          <a href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <a href="/" className="flex items-center gap-2 shrink-0 group">
+            <div className="w-7 h-7 bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm transition-transform group-hover:scale-105">
               <svg
                 className="w-4 h-4 text-white"
                 fill="none"
@@ -122,51 +77,59 @@ export default function DashboardPage({
             </span>
           </a>
           <span className="text-zinc-300 shrink-0">/</span>
-          <span className="text-sm text-zinc-500 truncate">{fileName}</span>
+          <span className="text-sm text-zinc-500 truncate max-w-[240px]">
+            {docData.fileName}
+          </span>
         </div>
-        <div className="flex gap-1 bg-zinc-100 rounded-lg p-1">
-          {[
-            { key: "chat", label: "Chat" },
-            { key: "insights", label: "Resumen" },
-          ].map((tab) => (
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 bg-zinc-100 rounded-lg p-1">
             <button
-              key={tab.key}
-              onClick={() => setActiveView(tab.key as "chat" | "insights")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                activeView === tab.key
+              onClick={() => setActiveView("chat")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeView === "chat"
                   ? "bg-white text-zinc-900 shadow-sm"
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
-              {tab.label}
+              Chat
             </button>
-          ))}
+            <button
+              onClick={() => setActiveView("insights")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeView === "insights"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              Resumen
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col min-w-0 border-r border-zinc-200">
-          <div className="flex-1 overflow-hidden bg-zinc-50 flex items-center justify-center">
-            {fileUrl ? (
-              <iframe
-                src={fileUrl}
-                className="w-full h-full"
-                title={fileName}
-              />
-            ) : (
-              <p className="text-sm text-zinc-400">
-                Vista previa no disponible
-              </p>
-            )}
+        <div className="flex-1 min-w-0 border-r border-zinc-200 flex flex-col">
+          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
+            <h2 className="text-sm font-semibold text-zinc-700">
+              {docData.fileName}
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {docData.text.length.toLocaleString()} caracteres · Vista previa
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <pre className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap font-sans">
+              {textPreview}
+            </pre>
           </div>
         </div>
 
-        <div className="w-[480px] flex flex-col shrink-0">
-          {activeView === "chat" && documentText ? (
-            <Chat documentText={documentText} />
-          ) : activeView === "insights" && documentText ? (
-            <InsightsPanel documentText={documentText} />
-          ) : null}
+        <div className="w-[500px] flex flex-col shrink-0 border-l border-zinc-200">
+          {activeView === "chat" ? (
+            <Chat documentText={docData.text} />
+          ) : (
+            <InsightsPanel documentText={docData.text} />
+          )}
         </div>
       </div>
     </div>

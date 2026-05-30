@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
-import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,51 +11,50 @@ export async function POST(request: NextRequest) {
 
     if (!file.name.endsWith(".pdf")) {
       return NextResponse.json(
-        { error: "Only PDF files are allowed" },
+        { error: "Solo se aceptan archivos PDF" },
         { status: 400 }
       );
     }
 
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "File too large. Maximum 10MB" },
+        { error: "El archivo es demasiado grande. Máximo 10MB" },
         { status: 400 }
       );
     }
 
-    const id = uuidv4();
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Store file in Vercel Blob (or locally in dev)
-    let fileUrl: string;
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(`documents/${id}.pdf`, file, {
-        access: "public",
-      });
-      fileUrl = blob.url;
-    } else {
-      // Dev mode: store in ./public/tmp/
-      const fs = require("fs");
-      const dir = "./public/tmp";
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const filePath = `${dir}/${id}.pdf`;
-      fs.writeFileSync(filePath, buffer);
-      fileUrl = `/tmp/${id}.pdf`;
+    let text: string;
+    try {
+      const pdf = require("pdf-parse");
+      const data = await pdf(buffer);
+      text = data.text;
+    } catch {
+      return NextResponse.json(
+        { error: "No se pudo leer el PDF. El archivo podría estar dañado o escaneado." },
+        { status: 400 }
+      );
+    }
+
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json(
+        { error: "No se pudo extraer texto del PDF. El archivo podría ser un documento escaneado (imagen)." },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
-      id,
-      fileUrl,
       fileName: file.name,
       fileSize: file.size,
+      text,
+      pageCount: 1,
     });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file" },
+      { error: "Error al procesar el archivo. Intenta de nuevo." },
       { status: 500 }
     );
   }
