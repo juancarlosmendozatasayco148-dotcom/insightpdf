@@ -23,6 +23,28 @@ export function getModel() {
   });
 }
 
+export async function generateWithRetry(
+  model: ReturnType<typeof getModel>,
+  request: { contents: { role: string; parts: { text: string }[] }[] } | string,
+  maxRetries = 5
+): Promise<{ response: { text: () => string } }> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = typeof request === "string"
+        ? await model.generateContent(request)
+        : await model.generateContent(request);
+      return result;
+    } catch (err: any) {
+      const isQuota = err.status === 429 || (err.message || "").includes("429") || (err.message || "").includes("quota");
+      if (!isQuota || attempt === maxRetries - 1) throw err;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+      console.log(`Gemini quota exceeded, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw new Error("Unexpected: all retries exhausted without result or error");
+}
+
 export function getEmbeddingModel() {
   if (!genAI) throw new Error("Gemini API key not configured");
   return genAI.getGenerativeModel({ model: "text-embedding-004" });

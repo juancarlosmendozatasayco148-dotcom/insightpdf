@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getModel, getSummaryPrompt } from "@/lib/gemini";
+import { getModel, generateWithRetry, getSummaryPrompt } from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
   try {
-    const { documentText, level = "medium" } = await request.json();
+    const raw = await request.text();
+    const { documentText, level = "medium" } = JSON.parse(raw);
 
     if (!documentText) {
       return NextResponse.json(
@@ -13,9 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     const model = getModel();
-
     const prompt = getSummaryPrompt(documentText, level as "short" | "medium" | "detailed");
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt);
     const text = result.response.text();
 
     return NextResponse.json({ text });
