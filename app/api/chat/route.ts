@@ -13,13 +13,23 @@ export async function POST(request: NextRequest) {
     }
 
     const model = getModel();
+    const systemPrompt = getChatSystemPrompt(documentText);
 
     const chat = model.startChat({
-      history: history.map((msg: { role: string; text: string }) => ({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.text }],
-      })),
-      systemInstruction: getChatSystemPrompt(documentText),
+      history: [
+        {
+          role: "user",
+          parts: [{ text: systemPrompt }],
+        },
+        {
+          role: "model",
+          parts: [{ text: "Entendido. Estoy listo para analizar el documento." }],
+        },
+        ...history.map((msg: { role: string; text: string }) => ({
+          role: msg.role === "assistant" ? "model" : "user",
+          parts: [{ text: msg.text }],
+        })),
+      ],
     });
 
     const result = await chat.sendMessage(message);
