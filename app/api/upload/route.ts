@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import PDFParser from "pdf2json";
+import { extractText } from "unpdf";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,37 +25,14 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const data = new Uint8Array(bytes);
 
     let text: string;
     try {
-      text = await new Promise<string>((resolve, reject) => {
-        const parser = new PDFParser();
-
-        parser.on("pdfParser_dataReady", () => {
-          try {
-            const rawText = parser.getRawTextContent();
-            parser.destroy();
-            resolve(rawText);
-          } catch (err) {
-            parser.destroy();
-            reject(err);
-          }
-        });
-
-        parser.on("pdfParser_dataError", (errData: unknown) => {
-          parser.destroy();
-          const msg =
-            errData && typeof errData === "object" && "parserError" in errData
-              ? String((errData as { parserError: Error }).parserError)
-              : "Error al procesar el PDF";
-          reject(new Error(msg));
-        });
-
-        parser.parseBuffer(buffer);
-      });
+      const { text: pages } = await extractText(data, { mergePages: true });
+      text = typeof pages === "string" ? pages : Array.isArray(pages) ? pages.join("\n") : String(pages);
     } catch (err) {
-      console.error("PDF parse error:", err);
+      console.error("PDF extract error:", err);
       return NextResponse.json(
         {
           error:
