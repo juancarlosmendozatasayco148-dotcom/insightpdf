@@ -15,26 +15,20 @@ export async function POST(request: NextRequest) {
     const model = getModel();
     const systemPrompt = getChatSystemPrompt(documentText);
 
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: systemPrompt }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Entendido. Estoy listo para analizar el documento." }],
-        },
-        ...history.map((msg: { role: string; text: string }) => ({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.text }],
-        })),
-      ],
-    });
+    const historyParts = history.map((msg: { role: string; text: string }) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.text }],
+    }));
 
-    const result = await chat.sendMessage(message);
-    const response = result.response;
-    const text = response.text();
+    const contents = [
+      { role: "user", parts: [{ text: systemPrompt }] },
+      { role: "model", parts: [{ text: "Ok." }] },
+      ...historyParts,
+      { role: "user", parts: [{ text: message }] },
+    ];
+
+    const result = await model.generateContent({ contents });
+    const text = result.response.text();
 
     return NextResponse.json({ text });
   } catch (error) {
