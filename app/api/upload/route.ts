@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,23 +25,31 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = new Uint8Array(bytes);
 
     let text: string;
     try {
-      const pdf = require("pdf-parse");
-      const data = await pdf(buffer);
-      text = data.text;
-    } catch {
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
+      text = result.text;
+      await parser.destroy();
+    } catch (err) {
+      console.error("PDF parse error:", err);
       return NextResponse.json(
-        { error: "No se pudo leer el PDF. El archivo podría estar dañado o escaneado." },
+        {
+          error:
+            "No se pudo procesar el PDF. Verifica que el archivo no esté dañado o protegido con contraseña.",
+        },
         { status: 400 }
       );
     }
 
     if (!text || text.trim().length === 0) {
       return NextResponse.json(
-        { error: "No se pudo extraer texto del PDF. El archivo podría ser un documento escaneado (imagen)." },
+        {
+          error:
+            "No se pudo extraer texto del PDF. El archivo podría ser un documento escaneado (imágenes sin texto seleccionable).",
+        },
         { status: 400 }
       );
     }
@@ -49,7 +58,6 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       text,
-      pageCount: 1,
     });
   } catch (error) {
     console.error("Upload error:", error);
