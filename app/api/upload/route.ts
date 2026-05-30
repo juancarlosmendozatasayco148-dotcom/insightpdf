@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+
+pdfjs.GlobalWorkerOptions.workerSrc =
+  "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,14 +28,28 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = new Uint8Array(bytes);
+    const data = new Uint8Array(bytes);
 
     let text: string;
+    let pageCount = 0;
     try {
-      const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      text = result.text;
-      await parser.destroy();
+      const loadingTask = pdfjs.getDocument({ data });
+      const doc = await loadingTask.promise;
+      pageCount = doc.numPages;
+
+      const textParts: string[] = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .filter((item) => "str" in item)
+          .map((item) => (item as { str: string }).str)
+          .join(" ");
+        textParts.push(pageText);
+      }
+
+      text = textParts.join("\n");
+      await doc.destroy();
     } catch (err) {
       console.error("PDF parse error:", err);
       return NextResponse.json(
@@ -44,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!text || text.trim().length === 0) {
+    if (!text || text.trim().length < 10) {
       return NextResponse.json(
         {
           error:
@@ -58,6 +75,7 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       text,
+      pageCount,
     });
   } catch (error) {
     console.error("Upload error:", error);
