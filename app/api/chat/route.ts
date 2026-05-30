@@ -16,31 +16,37 @@ function getChatSystemPrompt(documentText: string) {
 }
 
 export async function POST(request: NextRequest) {
+  let bodyRaw: string;
+
   try {
-    const rawBody = await request.text();
-    let body;
-    try {
-      body = JSON.parse(rawBody);
-    } catch (parseErr: any) {
-      console.error("Chat body parse error:", parseErr.message, "raw:", rawBody.slice(0, 300));
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-    const { documentText, message, history = [] } = body;
+    bodyRaw = await request.text();
+  } catch (err: any) {
+    console.error("Chat error reading body:", err.message);
+    return NextResponse.json({ error: "Cannot read request body" }, { status: 400 });
+  }
 
-    if (!documentText || !message) {
-      return NextResponse.json(
-        { error: "Missing documentText or message" },
-        { status: 400 }
-      );
-    }
+  let documentText: string;
+  let message: string;
+  let history: { role: string; text: string }[] = [];
 
+  try {
+    const parsed = JSON.parse(bodyRaw);
+    documentText = parsed.documentText;
+    message = parsed.message;
+    history = parsed.history || [];
+  } catch (err: any) {
+    console.error("Chat JSON parse error:", err.message, "body start:", bodyRaw.slice(0, 100));
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (!documentText || !message) {
+    return NextResponse.json({ error: "Missing documentText or message" }, { status: 400 });
+  }
+
+  try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("Chat error: GEMINI_API_KEY not configured");
-      return NextResponse.json(
-        { error: "API key not configured" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -54,32 +60,19 @@ export async function POST(request: NextRequest) {
     const contents = [
       { role: "user", parts: [{ text: systemPrompt }] },
       { role: "model", parts: [{ text: "Ok." }] },
-      ...history.map((msg: { role: string; text: string }) => ({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.text }],
+      ...history.map((m: { role: string; text: string }) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.text }],
       })),
       { role: "user", parts: [{ text: message }] },
     ];
 
-    let result;
-    try {
-      result = await model.generateContent({ contents });
-    } catch (geminiErr: any) {
-      console.error("Chat error - gemini call failed:", geminiErr.constructor?.name, geminiErr.message?.slice(0, 500));
-      console.error("Chat error - status:", geminiErr.status, "statusText:", geminiErr.statusText);
-      return NextResponse.json(
-        { error: `Gemini error: ${geminiErr.message?.slice(0, 100)}` },
-        { status: 500 }
-      );
-    }
-
+    const result = await model.generateContent({ contents });
     const text = result.response.text();
+
     return NextResponse.json({ text });
-  } catch (error: any) {
-    console.error("Chat error - request parse:", error.constructor?.name, error.message?.slice(0, 500));
-    return NextResponse.json(
-      { error: "Failed to process chat message" },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error("Chat Gemini error:", err.constructor.name, err.message?.slice(0, 500));
+    return NextResponse.json({ error: "Failed to process chat message" }, { status: 500 });
   }
 }
