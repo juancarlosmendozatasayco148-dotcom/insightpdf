@@ -89,23 +89,23 @@ export default function FileUpload() {
       <div
         {...getRootProps()}
         className={`relative border-2 border-dashed rounded-2xl p-14 text-center cursor-pointer transition-all duration-300 ${
-          isDragActive
+          isDragActive || dragOver
             ? "border-indigo-400 bg-indigo-50/80 scale-[1.02] shadow-lg shadow-indigo-100"
-            : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-md hover:shadow-zinc-100/50"
+            : "border-zinc-200 hover:border-indigo-300 hover:bg-zinc-50 hover:shadow-lg hover:shadow-zinc-100/50"
         }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-5">
           <div
             className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-              isDragActive
+              isDragActive || dragOver
                 ? "bg-indigo-100 scale-110"
-                : "bg-zinc-100 group-hover:bg-zinc-200"
+                : "bg-zinc-100"
             }`}
           >
             <svg
               className={`w-8 h-8 transition-colors duration-300 ${
-                isDragActive ? "text-indigo-500" : "text-zinc-400"
+                isDragActive || dragOver ? "text-indigo-500" : "text-zinc-400"
               }`}
               fill="none"
               viewBox="0 0 24 24"
@@ -121,7 +121,7 @@ export default function FileUpload() {
           </div>
           <div>
             <p className="text-base font-medium text-zinc-900">
-              {isDragActive
+              {isDragActive || dragOver
                 ? "Suelta tu PDF aquí"
                 : "Arrastra tu PDF o haz clic"}
             </p>
@@ -156,7 +156,7 @@ export default function FileUpload() {
       )}
 
       {file && !uploading && (
-        <div className="mt-5 animate-fade-in">
+        <div className="mt-5 animate-scale-in">
           <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-zinc-200 shadow-sm">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
@@ -204,9 +204,14 @@ export default function FileUpload() {
           </div>
           <button
             onClick={handleUpload}
-            className="mt-3 w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-indigo-200/50 active:scale-[0.98]"
+            className="mt-3 w-full py-3 px-6 bg-gradient-to-br from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-medium rounded-xl transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-indigo-200/50 active:scale-[0.98]"
           >
-            Analizar documento
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Analizar documento
+            </span>
           </button>
         </div>
       )}
@@ -215,13 +220,16 @@ export default function FileUpload() {
         <div className="mt-5 p-5 bg-zinc-50 rounded-xl border border-zinc-200 animate-fade-in">
           <div className="flex items-center gap-4">
             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin shrink-0" />
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-zinc-900">
                 Procesando documento...
               </p>
               <p className="text-xs text-zinc-500 mt-0.5">
                 {uploadProgress}
               </p>
+              <div className="mt-2 h-1 bg-zinc-200 rounded-full overflow-hidden">
+                <div className="h-full w-1/4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full animate-progress" />
+              </div>
             </div>
           </div>
         </div>

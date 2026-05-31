@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 
@@ -18,6 +18,36 @@ const suggestions = [
   "Resume los puntos clave",
   "¿Qué conclusiones presenta?",
 ];
+
+function CopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [code]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="copy-button absolute top-2 right-2 p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-all"
+      title="Copiar código"
+    >
+      {copied ? (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 export default function Chat({ documentText }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -89,7 +119,7 @@ export default function Chat({ documentText }: ChatProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 py-4 border-b border-zinc-100">
-        <h2 className="text-sm font-semibold text-zinc-900">Chat</h2>
+        <h2 className="text-sm font-semibold text-zinc-900">Chat con IA</h2>
         <p className="text-xs text-zinc-400 mt-0.5">
           Pregunta sobre el contenido del documento
         </p>
@@ -125,7 +155,7 @@ export default function Chat({ documentText }: ChatProps) {
                       setInput(q);
                       inputRef.current?.focus();
                     }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-zinc-600 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-200/50 transition-all hover:border-zinc-300"
+                    className="w-full text-left px-4 py-2.5 text-sm text-zinc-600 bg-zinc-50 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl border border-zinc-200/50 transition-all hover:border-indigo-200"
                   >
                     {q}
                   </button>
@@ -159,8 +189,20 @@ export default function Chat({ documentText }: ChatProps) {
               }`}
             >
               {msg.role === "assistant" ? (
-                <div className="prose prose-sm max-w-none prose-zinc prose-headings:text-zinc-800 prose-a:text-indigo-600 prose-code:text-indigo-600 prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-zinc-900 prose-pre:text-zinc-100">
-                  <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+                <div className="prose prose-sm max-w-none prose-zinc prose-headings:text-zinc-800 prose-a:text-indigo-600 prose-code:text-indigo-600 prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-pre:relative">
+                  <ReactMarkdown
+                    rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      pre: ({ children, ...props }) => (
+                        <pre {...props} className="relative group">
+                          {children}
+                          <CopyButton
+                            code={extractCodeFromChildren(children)}
+                          />
+                        </pre>
+                      ),
+                    }}
+                  >
                     {msg.text}
                   </ReactMarkdown>
                 </div>
@@ -226,4 +268,9 @@ export default function Chat({ documentText }: ChatProps) {
       </div>
     </div>
   );
+}
+
+function extractCodeFromChildren(children: React.ReactNode): string {
+  const code = (children as any)?.[1]?.props?.children?.[0] ?? "";
+  return typeof code === "string" ? code : "";
 }

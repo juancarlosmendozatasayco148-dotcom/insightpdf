@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [docData, setDocData] = useState<DocData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<"chat" | "insights">("chat");
+  const [showPreview, setShowPreview] = useState(true);
 
   useEffect(() => {
     try {
@@ -54,7 +55,7 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      <header className="border-b border-zinc-200 px-6 h-14 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-sm">
+      <header className="border-b border-zinc-200 px-4 sm:px-6 h-14 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center gap-3 min-w-0">
           <a href="/" className="flex items-center gap-2 shrink-0 group">
             <div className="w-7 h-7 bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm transition-transform group-hover:scale-105">
@@ -72,16 +73,26 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <span className="text-sm font-semibold text-zinc-900">
+            <span className="text-sm font-semibold text-zinc-900 hidden sm:inline">
               InsightPDF
             </span>
           </a>
-          <span className="text-zinc-300 shrink-0">/</span>
-          <span className="text-sm text-zinc-500 truncate max-w-[240px]">
+          <span className="text-zinc-300 hidden sm:inline shrink-0">/</span>
+          <span className="text-sm text-zinc-500 truncate max-w-[120px] sm:max-w-[240px]">
             {docData.fileName}
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {showPreview ? "Ocultar" : "Vista previa"}
+          </button>
           <div className="flex gap-1 bg-zinc-100 rounded-lg p-1">
             <button
               onClick={() => setActiveView("chat")}
@@ -108,23 +119,25 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 min-w-0 border-r border-zinc-200 flex flex-col">
-          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
-            <h2 className="text-sm font-semibold text-zinc-700">
-              {docData.fileName}
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              {docData.text.length.toLocaleString()} caracteres · Vista previa
-            </p>
+        {showPreview && (
+          <div className="hidden lg:flex flex-col w-1/3 min-w-0 border-r border-zinc-200">
+            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
+              <h2 className="text-sm font-semibold text-zinc-700">
+                {docData.fileName}
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {docData.text.length.toLocaleString()} caracteres · Vista previa
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <pre className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap font-sans">
+                {textPreview}
+              </pre>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-6">
-            <pre className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap font-sans">
-              {textPreview}
-            </pre>
-          </div>
-        </div>
+        )}
 
-        <div className="w-[500px] flex flex-col shrink-0 border-l border-zinc-200">
+        <div className={`flex-1 flex flex-col min-w-0 ${showPreview ? "" : ""}`}>
           {activeView === "chat" ? (
             <Chat documentText={docData.text} />
           ) : (
