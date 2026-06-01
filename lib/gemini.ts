@@ -1,53 +1,82 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.AI_API_KEY;
 
 if (!apiKey) {
-  console.warn("GEMINI_API_KEY not configured");
+  console.warn("AI_API_KEY not configured");
 }
 
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+const client = apiKey
+  ? new OpenAI({
+      baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
+      apiKey,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.APP_URL || "https://insightpdf.app",
+        "X-Title": "InsightPDF",
+      },
+    })
+  : null;
 
-const generationConfig = {
-  temperature: 0.4,
-  topP: 0.95,
-  topK: 40,
-  maxOutputTokens: 8192,
-};
+const defaultModel = process.env.AI_MODEL || "google/gemini-2.5-flash";
 
-export function getModel() {
-  if (!genAI) throw new Error("Gemini API key not configured");
-  return genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    generationConfig,
+export async function generateText(
+  prompt: string,
+  systemPrompt?: string
+): Promise<string> {
+  if (!client) throw new Error("AI_API_KEY not configured");
+
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [];
+  if (systemPrompt) {
+    messages.push({ role: "system", content: systemPrompt });
+  }
+  messages.push({ role: "user", content: prompt });
+
+  const response = await client.chat.completions.create({
+    model: defaultModel,
+    messages,
+    temperature: 0.4,
+    max_tokens: 8192,
   });
+
+  return response.choices[0]?.message?.content || "";
+}
+
+export async function generateChat(
+  messages: { role: string; content: string }[]
+): Promise<string> {
+  if (!client) throw new Error("AI_API_KEY not configured");
+
+  const response = await client.chat.completions.create({
+    model: defaultModel,
+    messages: messages as any,
+    temperature: 0.4,
+    max_tokens: 8192,
+  });
+
+  return response.choices[0]?.message?.content || "";
 }
 
 export async function generateWithRetry(
-  model: ReturnType<typeof getModel>,
-  request: { contents: { role: string; parts: { text: string }[] }[] } | string,
+  fn: () => Promise<string>,
   maxRetries = 5
-): Promise<{ response: { text: () => string } }> {
+): Promise<string> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const result = typeof request === "string"
-        ? await model.generateContent(request)
-        : await model.generateContent(request);
-      return result;
+      return await fn();
     } catch (err: any) {
-      const isQuota = err.status === 429 || (err.message || "").includes("429") || (err.message || "").includes("quota");
+      const isQuota =
+        err.status === 429 ||
+        (err.message || "").includes("429") ||
+        (err.message || "").includes("quota");
       if (!isQuota || attempt === maxRetries - 1) throw err;
       const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
-      console.log(`Gemini quota exceeded, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      console.log(
+        `AI rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+      );
       await new Promise((r) => setTimeout(r, delay));
     }
   }
   throw new Error("Unexpected: all retries exhausted without result or error");
-}
-
-export function getEmbeddingModel() {
-  if (!genAI) throw new Error("Gemini API key not configured");
-  return genAI.getGenerativeModel({ model: "text-embedding-004" });
 }
 
 const CHAT_SYSTEM_PROMPT = `Eres un asistente de investigación inteligente. Tu función es ayudar al usuario a analizar, comprender y extraer información de documentos PDF.
@@ -64,11 +93,17 @@ export function getChatSystemPrompt(documentText: string) {
   return `${CHAT_SYSTEM_PROMPT}\n\nContexto del documento:\n\n${documentText}`;
 }
 
-export function getSummaryPrompt(documentText: string, level: "short" | "medium" | "detailed") {
+export function getSummaryPrompt(
+  documentText: string,
+  level: "short" | "medium" | "detailed"
+) {
   const instructions = {
-    short: "Genera un resumen MUY breve de 1-2 párrafos con las ideas principales.",
-    medium: "Genera un resumen de extensión media (3-5 párrafos) cubriendo los puntos clave, estructura y conclusiones principales.",
-    detailed: "Genera un resumen detallado que incluya: introducción, metodología (si aplica), hallazgos principales, conclusiones y recomendaciones. Estructura con secciones y viñetas.",
+    short:
+      "Genera un resumen MUY breve de 1-2 párrafos con las ideas principales.",
+    medium:
+      "Genera un resumen de extensión media (3-5 párrafos) cubriendo los puntos clave, estructura y conclusiones principales.",
+    detailed:
+      "Genera un resumen detallado que incluya: introducción, metodología (si aplica), hallazgos principales, conclusiones y recomendaciones. Estructura con secciones y viñetas.",
   };
 
   return `${instructions[level]}
