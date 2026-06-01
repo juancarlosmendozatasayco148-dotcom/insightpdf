@@ -18,7 +18,7 @@ const generationConfig = {
 export function getModel() {
   if (!genAI) throw new Error("Gemini API key not configured");
   return genAI.getGenerativeModel({
-    model: "gemini-flash-latest",
+    model: "gemini-2.5-flash",
     generationConfig,
   });
 }

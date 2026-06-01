@@ -31,9 +31,10 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
         body: JSON.stringify({ documentText, level }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al generar el resumen.");
       setSummary(data.text);
-    } catch {
-      setSummary("Error al generar el resumen.");
+    } catch (err: any) {
+      setSummary(err?.message || "Error al generar el resumen.");
     } finally {
       setLoading(null);
     }
@@ -48,9 +49,10 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
         body: JSON.stringify({ documentText }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al extraer insights.");
       setInsights(data.text);
-    } catch {
-      setInsights("Error al extraer insights.");
+    } catch (err: any) {
+      setInsights(err?.message || "Error al extraer insights.");
     } finally {
       setLoading(null);
     }

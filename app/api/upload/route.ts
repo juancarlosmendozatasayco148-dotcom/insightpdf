@@ -49,8 +49,12 @@ export async function POST(request: NextRequest) {
       fileSize: file.size,
       text,
     });
-  } catch (error) {
-    console.error("Upload error:", error);
+  } catch (err: any) {
+    console.error("Upload error:", err);
+    const isQuota = (err.message || "").includes("429") || (err.message || "").includes("quota") || (err.message || "").includes("RESOURCE_EXHAUSTED");
+    if (isQuota) {
+      return NextResponse.json({ error: "Límite de cuota de Gemini alcanzado. Espera unos minutos o configura facturación en https://ai.google.dev/pricing" }, { status: 429 });
+    }
     return NextResponse.json(
       { error: "Error al procesar el archivo. Intenta de nuevo." },
       { status: 500 }
@@ -76,7 +80,7 @@ async function extractWithGemini(data: Uint8Array): Promise<string | null> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-flash-latest",
+      model: "gemini-2.5-flash",
       generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
     });
 

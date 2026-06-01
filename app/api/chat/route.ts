@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ text });
   } catch (err: any) {
     console.error("Chat Gemini error:", err.constructor.name, err.message?.slice(0, 500));
-    return NextResponse.json({ error: "Failed to process chat message" }, { status: 500 });
+    const status = err.status || 500;
+    const isQuota = status === 429 || (err.message || "").includes("429") || (err.message || "").includes("quota") || (err.message || "").includes("RESOURCE_EXHAUSTED");
+    if (isQuota) {
+      return NextResponse.json({ error: "Límite de cuota de Gemini alcanzado. Espera unos minutos o configura facturación en https://ai.google.dev/pricing" }, { status: 429 });
+    }
+    const isModelError = (err.message || "").includes("not found") || (err.message || "").includes("not supported");
+    if (isModelError) {
+      return NextResponse.json({ error: "Error: El modelo de IA especificado no está disponible. Contacta al administrador." }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Error al procesar el mensaje. Intenta de nuevo." }, { status: 500 });
   }
 }

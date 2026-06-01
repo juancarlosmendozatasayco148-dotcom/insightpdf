@@ -19,10 +19,15 @@ export async function POST(request: NextRequest) {
     const text = result.response.text();
 
     return NextResponse.json({ text });
-  } catch (error) {
-    console.error("Summary error:", error);
+  } catch (err: any) {
+    console.error("Summary error:", err);
+    const status = err.status || 500;
+    const isQuota = status === 429 || (err.message || "").includes("429") || (err.message || "").includes("quota") || (err.message || "").includes("RESOURCE_EXHAUSTED");
+    if (isQuota) {
+      return NextResponse.json({ error: "Límite de cuota de Gemini alcanzado. Espera unos minutos o configura facturación en https://ai.google.dev/pricing" }, { status: 429 });
+    }
     return NextResponse.json(
-      { error: "Failed to generate summary" },
+      { error: "Error al generar el resumen. Intenta de nuevo." },
       { status: 500 }
     );
   }

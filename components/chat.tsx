@@ -88,12 +88,13 @@ export default function Chat({ documentText }: ChatProps) {
         ...prev,
         { role: "assistant", text: data.text },
       ]);
-    } catch {
+    } catch (err: any) {
+      const errorMsg = err?.message || "Lo siento, hubo un error al procesar tu mensaje. Intenta de nuevo.";
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: "Lo siento, hubo un error al procesar tu mensaje. Intenta de nuevo.",
+          text: errorMsg,
         },
       ]);
     } finally {
