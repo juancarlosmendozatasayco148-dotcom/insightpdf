@@ -1,64 +1,111 @@
 import OpenAI from "openai";
 
-const apiKey = process.env.AI_API_KEY;
-
-if (!apiKey) {
-  console.warn("AI_API_KEY not configured");
+interface AIProvider {
+  name: string;
+  client: OpenAI | null;
+  model: string;
 }
 
-const client = apiKey
-  ? new OpenAI({
-      baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
-      apiKey,
+const openrouterKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY;
+const groqKey = process.env.GROQ_API_KEY;
+
+const providers: AIProvider[] = [];
+
+if (openrouterKey) {
+  providers.push({
+    name: "OpenRouter",
+    client: new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: openrouterKey,
       defaultHeaders: {
         "HTTP-Referer": process.env.APP_URL || "https://insightpdf.app",
         "X-Title": "InsightPDF",
       },
-    })
-  : null;
+    }),
+    model: process.env.AI_MODEL || "google/gemini-2.5-flash:free",
+  });
+}
 
-const defaultModel = process.env.AI_MODEL || "google/gemini-2.5-flash";
+if (groqKey) {
+  providers.push({
+    name: "Groq",
+    client: new OpenAI({
+      baseURL: "https://api.groq.com/openai/v1",
+      apiKey: groqKey,
+    }),
+    model: "llama-3.3-70b-versatile",
+  });
+}
+
+if (providers.length === 0) {
+  console.warn(
+    "No AI API key configured. Set OPENROUTER_API_KEY (recomendado) o GROQ_API_KEY en .env"
+  );
+}
+
+async function tryProvider(
+  provider: AIProvider,
+  messages: { role: string; content: string }[]
+): Promise<string | null> {
+  if (!provider.client) return null;
+  try {
+    const response = await provider.client.chat.completions.create({
+      model: provider.model,
+      messages: messages as any,
+      temperature: 0.4,
+      max_tokens: 8192,
+    });
+    return response.choices[0]?.message?.content || "";
+  } catch (err: any) {
+    const isQuota =
+      err.status === 429 ||
+      (err.message || "").includes("429") ||
+      (err.message || "").includes("quota") ||
+      (err.message || "").includes("RESOURCE_EXHAUSTED");
+    if (isQuota) {
+      console.log(`${provider.name} quota exhausted, trying next provider`);
+      return null;
+    }
+    throw err;
+  }
+}
 
 export async function generateText(
   prompt: string,
   systemPrompt?: string
 ): Promise<string> {
-  if (!client) throw new Error("AI_API_KEY not configured");
+  if (providers.length === 0) throw new Error("No AI API key configured");
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [];
+  const messages: { role: string; content: string }[] = [];
   if (systemPrompt) {
     messages.push({ role: "system", content: systemPrompt });
   }
   messages.push({ role: "user", content: prompt });
 
-  const response = await client.chat.completions.create({
-    model: defaultModel,
-    messages,
-    temperature: 0.4,
-    max_tokens: 8192,
-  });
+  for (const provider of providers) {
+    const result = await tryProvider(provider, messages);
+    if (result !== null) return result;
+  }
 
-  return response.choices[0]?.message?.content || "";
+  throw Object.assign(new Error("Límite de cuota alcanzado en todos los proveedores. Espera unos minutos."), { status: 429 });
 }
 
 export async function generateChat(
   messages: { role: string; content: string }[]
 ): Promise<string> {
-  if (!client) throw new Error("AI_API_KEY not configured");
+  if (providers.length === 0) throw new Error("No AI API key configured");
 
-  const response = await client.chat.completions.create({
-    model: defaultModel,
-    messages: messages as any,
-    temperature: 0.4,
-    max_tokens: 8192,
-  });
+  for (const provider of providers) {
+    const result = await tryProvider(provider, messages);
+    if (result !== null) return result;
+  }
 
-  return response.choices[0]?.message?.content || "";
+  throw Object.assign(new Error("Límite de cuota alcanzado en todos los proveedores. Espera unos minutos."), { status: 429 });
 }
 
 export async function generateWithRetry(
   fn: () => Promise<string>,
-  maxRetries = 5
+  maxRetries = 3
 ): Promise<string> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
@@ -69,14 +116,14 @@ export async function generateWithRetry(
         (err.message || "").includes("429") ||
         (err.message || "").includes("quota");
       if (!isQuota || attempt === maxRetries - 1) throw err;
-      const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+      const delay = Math.min(1000 * Math.pow(2, attempt), 15000);
       console.log(
-        `AI rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+        `Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
       );
       await new Promise((r) => setTimeout(r, delay));
     }
   }
-  throw new Error("Unexpected: all retries exhausted without result or error");
+  throw new Error("Unexpected: all retries exhausted");
 }
 
 const CHAT_SYSTEM_PROMPT = `Eres un asistente de investigación inteligente. Tu función es ayudar al usuario a analizar, comprender y extraer información de documentos PDF.
