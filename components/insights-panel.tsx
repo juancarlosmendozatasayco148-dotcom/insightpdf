@@ -12,9 +12,7 @@ type Tab = "summary" | "insights";
 
 export default function InsightsPanel({ documentText }: InsightsPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("summary");
-  const [summaryLevel, setSummaryLevel] = useState<
-    "short" | "medium" | "detailed"
-  >("medium");
+  const [summaryLevel, setSummaryLevel] = useState<"short" | "medium" | "detailed">("medium");
   const [summary, setSummary] = useState<string | null>(null);
   const [insights, setInsights] = useState<string | null>(null);
   const [loading, setLoading] = useState<"summary" | "insights" | null>(null);
@@ -66,7 +64,7 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
       <div className="flex border-b border-stone-200 px-5">
         <button
           onClick={() => setActiveTab("summary")}
-          className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+          className={`px-4 py-3 text-sm font-medium transition-all duration-300 border-b-2 -mb-px ${
             activeTab === "summary"
               ? "text-black border-black"
               : "text-stone-500 hover:text-stone-700 border-transparent"
@@ -76,7 +74,7 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
         </button>
         <button
           onClick={() => setActiveTab("insights")}
-          className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+          className={`px-4 py-3 text-sm font-medium transition-all duration-300 border-b-2 -mb-px ${
             activeTab === "insights"
               ? "text-black border-black"
               : "text-stone-500 hover:text-stone-700 border-transparent"
@@ -88,14 +86,14 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {activeTab === "summary" && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <div className="flex gap-2">
               {(["short", "medium", "detailed"] as const).map((level) => (
                 <button
                   key={level}
                   onClick={() => generateSummary(level)}
                   disabled={loading === "summary"}
-                  className={`px-3 py-1.5 text-xs font-medium transition-all border ${
+                  className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 border ${
                     summaryLevel === level && summary
                       ? "bg-black text-white border-black"
                       : "bg-white text-stone-600 border-stone-300 hover:border-black"
@@ -118,21 +116,21 @@ export default function InsightsPanel({ documentText }: InsightsPanelProps) {
                 </ReactMarkdown>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <p className="text-sm text-stone-500 mb-4">Selecciona un nivel para generar el resumen</p>
+              <div className="text-center py-12 text-stone-500">
+                <p className="text-sm">Selecciona un nivel para generar el resumen</p>
               </div>
             )}
           </div>
         )}
 
         {activeTab === "insights" && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             {!insights && !loading ? (
               <div className="text-center py-12">
                 <p className="text-sm text-stone-500 mb-4">Extrae conceptos clave, conexiones y más</p>
                 <button
                   onClick={generateInsights}
-                  className="px-5 py-2.5 text-sm bg-black text-white rounded hover:bg-stone-800 transition-colors"
+                  className="px-5 py-2.5 text-sm bg-black text-white hover:bg-stone-800 transition-all duration-200 active:scale-[0.97]"
                 >
                   Extraer insights
                 </button>

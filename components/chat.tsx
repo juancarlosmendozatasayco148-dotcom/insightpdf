@@ -31,7 +31,7 @@ function CopyButton({ code }: { code: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="copy-button absolute top-2 right-2 p-1.5 rounded bg-stone-200 hover:bg-stone-300 text-stone-500 hover:text-stone-700 transition-all"
+      className="copy-button absolute top-2 right-2 p-1.5 rounded bg-stone-200 hover:bg-stone-300 text-stone-500 hover:text-stone-700 transition-all duration-200"
       title="Copiar código"
     >
       {copied ? (
@@ -114,7 +114,7 @@ export default function Chat({ documentText }: ChatProps) {
                   <button
                     key={q}
                     onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-stone-600 border border-stone-200 hover:border-black transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-sm text-stone-600 border border-stone-200 hover:border-black transition-all duration-200"
                   >
                     {q}
                   </button>
@@ -126,12 +126,12 @@ export default function Chat({ documentText }: ChatProps) {
 
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-start gap-3 animate-fade-in ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300 ${
               msg.role === "user" ? "bg-black text-white" : "bg-stone-200 text-stone-500"
             }`}>
               {msg.role === "user" ? "T" : "AI"}
             </div>
-            <div className={`max-w-[85%] rounded px-4 py-3 ${
+            <div className={`max-w-[85%] rounded px-4 py-3 transition-all duration-300 ${
               msg.role === "user" ? "bg-black text-white" : "bg-stone-50 border border-stone-200 text-black"
             }`}>
               {msg.role === "assistant" ? (
@@ -178,12 +178,12 @@ export default function Chat({ documentText }: ChatProps) {
             onKeyDown={handleKeyDown}
             placeholder="Pregunta sobre el documento..."
             rows={1}
-            className="flex-1 resize-none border border-stone-300 px-4 py-3 text-sm outline-none focus:border-black transition-colors"
+            className="flex-1 resize-none border border-stone-300 px-4 py-3 text-sm outline-none focus:border-black transition-all duration-200"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading}
-            className="shrink-0 w-10 h-10 bg-black hover:bg-stone-800 disabled:bg-stone-300 text-white flex items-center justify-center transition-colors active:scale-95"
+            className="shrink-0 w-10 h-10 bg-black hover:bg-stone-800 disabled:bg-stone-300 text-white flex items-center justify-center transition-all duration-200 active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

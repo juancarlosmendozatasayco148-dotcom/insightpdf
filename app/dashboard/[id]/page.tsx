@@ -39,7 +39,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
+        <div className="text-center animate-fade-in">
           <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="mt-4 text-sm text-stone-500">Cargando documento...</p>
         </div>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
       <header className="border-b border-stone-200 px-4 sm:px-6 h-14 flex items-center justify-between shrink-0 bg-white">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-6 h-6 bg-black rounded flex items-center justify-center">
+            <div className="w-6 h-6 bg-black rounded flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
               <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12l3 3m0 0l3-3m-3 3v-6m1.5-6a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -76,7 +76,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowPreview(!showPreview)}
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 border border-stone-300 hover:border-black rounded transition-colors"
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 border border-stone-300 hover:border-black transition-all duration-200"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -84,10 +84,10 @@ export default function DashboardPage() {
             </svg>
             {showPreview ? "Ocultar" : "Vista previa"}
           </button>
-          <div className="flex border border-stone-300 rounded">
+          <div className="flex border border-stone-300 rounded transition-all duration-200">
             <button
               onClick={() => setActiveView("chat")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                 activeView === "chat"
                   ? "bg-black text-white"
                   : "text-stone-500 hover:text-stone-700"
@@ -97,7 +97,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setActiveView("insights")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                 activeView === "insights"
                   ? "bg-black text-white"
                   : "text-stone-500 hover:text-stone-700"
@@ -113,9 +113,7 @@ export default function DashboardPage() {
         {showPreview && (
           <div className="hidden lg:flex flex-col w-1/3 min-w-0 border-r border-stone-200">
             <div className="px-6 py-4 border-b border-stone-200 bg-stone-50">
-              <h2 className="text-sm font-semibold text-black">
-                {docData.fileName}
-              </h2>
+              <h2 className="text-sm font-semibold text-black">{docData.fileName}</h2>
               <p className="text-xs text-stone-400 mt-0.5">
                 {docData.text.length.toLocaleString()} caracteres · Vista previa
               </p>

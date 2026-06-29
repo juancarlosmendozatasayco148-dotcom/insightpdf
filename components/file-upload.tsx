@@ -71,33 +71,39 @@ export default function FileUpload() {
     }
   };
 
+  const isActive = isDragActive || dragOver;
+
   return (
     <div className="w-full max-w-xl mx-auto">
       <div
         {...getRootProps()}
-        className={`border border-dashed p-16 text-center cursor-pointer transition-all duration-300 ${
-          isDragActive || dragOver
-            ? "border-black bg-stone-50"
+        className={`relative border-2 border-dashed p-16 text-center cursor-pointer transition-all duration-300 ${
+          isActive
+            ? "border-black bg-stone-50 scale-[1.01]"
             : "border-stone-300 hover:border-black hover:bg-stone-50"
-        }`}
+        } ${error ? "border-red-400" : ""}`}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-4">
-          <svg
-            className={`w-8 h-8 transition-colors ${isDragActive || dragOver ? "text-black" : "text-stone-400"}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          <p className="text-sm text-black">
-            {isDragActive || dragOver
-              ? "Suelta tu PDF aquí"
-              : "Arrastra tu PDF o haz clic"}
-          </p>
-          <p className="text-xs text-stone-400">PDF hasta 10MB</p>
+        <div className="flex flex-col items-center gap-4 pointer-events-none">
+          <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
+            isActive
+              ? "bg-black text-white border-black scale-110"
+              : "bg-white text-stone-400 border-stone-300 group-hover:border-black"
+          }`}>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+          </div>
+          <div>
+            <p className={`text-sm font-medium transition-colors duration-300 ${
+              isActive ? "text-black" : "text-stone-600"
+            }`}>
+              {isActive
+                ? "Suelta tu PDF aquí"
+                : "Arrastra tu PDF o haz clic"}
+            </p>
+            <p className="text-xs text-stone-400 mt-1">PDF hasta 10MB</p>
+          </div>
         </div>
       </div>
 
@@ -127,7 +133,7 @@ export default function FileUpload() {
           </div>
           <button
             onClick={handleUpload}
-            className="mt-3 w-full py-3 px-6 text-sm bg-black text-white rounded hover:bg-stone-800 transition-colors"
+            className="mt-3 w-full py-3 px-6 text-sm bg-black text-white hover:bg-stone-800 transition-all duration-300 active:scale-[0.98]"
           >
             <span className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -146,7 +152,7 @@ export default function FileUpload() {
             <div className="flex-1">
               <p className="text-sm font-medium text-black">Procesando documento...</p>
               <p className="text-xs text-stone-400 mt-0.5">{uploadProgress}</p>
-              <div className="mt-2 h-1 bg-stone-200 rounded-full overflow-hidden">
+              <div className="mt-2 h-1 bg-stone-200 overflow-hidden">
                 <div className="h-full w-1/4 bg-black rounded-full animate-progress" />
               </div>
             </div>
