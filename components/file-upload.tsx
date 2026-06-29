@@ -1,38 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
 export default function FileUpload() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const acceptFile = useCallback((selected: File) => {
     setError(null);
-    const selected = acceptedFiles[0];
-    if (!selected) return;
     if (!selected.name.endsWith(".pdf")) {
       setError("Solo se aceptan archivos PDF");
-      return;
+      return false;
     }
     if (selected.size > 10 * 1024 * 1024) {
       setError("El archivo es demasiado grande. Máximo 10MB");
-      return;
+      return false;
     }
     setFile(selected);
+    return true;
   }, []);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const selected = acceptedFiles[0];
+    if (selected) acceptFile(selected);
+  }, [acceptFile]);
 
   const {
     getRootProps,
-    getInputProps,
     isDragActive,
-    open,
   } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"] },
@@ -40,13 +43,34 @@ export default function FileUpload() {
     maxSize: 10 * 1024 * 1024,
     onDragEnter: () => setDragOver(true),
     onDragLeave: () => setDragOver(false),
+    noClick: true,
+    noKeyboard: true,
   });
+
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   useEffect(() => {
     if (window.location.hash === "#upload") {
-      setTimeout(() => open(), 500);
+      setTimeout(openFilePicker, 500);
     }
-  }, [open]);
+  }, [openFilePicker]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      acceptFile(selected);
+    }
+    e.target.value = "";
+  }, [acceptFile]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      openFilePicker();
+    }
+  }, [openFilePicker]);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -83,14 +107,35 @@ export default function FileUpload() {
   return (
     <div className="w-full max-w-xl mx-auto">
       <div
-        {...getRootProps({ onClick: () => open() })}
+        {...getRootProps()}
+        onClick={openFilePicker}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
         className={`relative border-2 border-dashed p-16 text-center cursor-pointer transition-all duration-300 ${
           isActive
             ? "border-black bg-stone-50 scale-[1.01]"
             : "border-stone-300 hover:border-black hover:bg-stone-50"
         } ${error ? "border-red-400" : ""}`}
       >
-        <input {...getInputProps()} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          onChange={handleFileChange}
+          style={{
+            position: "absolute",
+            width: 0,
+            height: 0,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0,0,0,0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+          tabIndex={-1}
+        />
         <div className="flex flex-col items-center gap-4">
           <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
             isActive
