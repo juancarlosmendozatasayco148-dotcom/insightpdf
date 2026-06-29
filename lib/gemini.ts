@@ -22,7 +22,7 @@ if (openrouterKey) {
         "X-Title": "InsightPDF",
       },
     }),
-    model: process.env.AI_MODEL || "google/gemini-2.5-flash:free",
+    model: process.env.AI_MODEL || "google/gemma-4-31b-it:free",
   });
 }
 
