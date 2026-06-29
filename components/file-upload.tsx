@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
 export default function FileUpload() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -48,22 +47,21 @@ export default function FileUpload() {
   });
 
   const openFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf";
+    input.onchange = (e: Event) => {
+      const selected = (e.target as HTMLInputElement).files?.[0];
+      if (selected) acceptFile(selected);
+    };
+    input.click();
+  }, [acceptFile]);
 
   useEffect(() => {
     if (window.location.hash === "#upload") {
       setTimeout(openFilePicker, 500);
     }
   }, [openFilePicker]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) {
-      acceptFile(selected);
-    }
-    e.target.value = "";
-  }, [acceptFile]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === " " || e.key === "Enter") {
@@ -118,24 +116,6 @@ export default function FileUpload() {
             : "border-stone-300 hover:border-black hover:bg-stone-50"
         } ${error ? "border-red-400" : ""}`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileChange}
-          style={{
-            position: "absolute",
-            width: 0,
-            height: 0,
-            padding: 0,
-            margin: -1,
-            overflow: "hidden",
-            clip: "rect(0,0,0,0)",
-            whiteSpace: "nowrap",
-            border: 0,
-          }}
-          tabIndex={-1}
-        />
         <div className="flex flex-col items-center gap-4">
           <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
             isActive
