@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
-import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
@@ -29,25 +28,6 @@ export default function FileUpload() {
     return true;
   }, []);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const selected = acceptedFiles[0];
-    if (selected) acceptFile(selected);
-  }, [acceptFile]);
-
-  const {
-    getRootProps,
-    isDragActive,
-  } = useDropzone({
-    onDrop,
-    accept: { "application/pdf": [".pdf"] },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
-    onDragEnter: () => setDragOver(true),
-    onDragLeave: () => setDragOver(false),
-    noClick: true,
-    noKeyboard: true,
-  });
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) acceptFile(selected);
@@ -67,6 +47,27 @@ export default function FileUpload() {
     window.addEventListener("hashchange", checkHash);
     return () => window.removeEventListener("hashchange", checkHash);
   }, [openFilePicker]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) acceptFile(file);
+  }, [acceptFile]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === " " || e.key === "Enter") {
@@ -105,8 +106,6 @@ export default function FileUpload() {
     }
   };
 
-  const isActive = isDragActive || dragOver;
-
   return (
     <div className="w-full max-w-xl mx-auto">
       <input
@@ -117,20 +116,23 @@ export default function FileUpload() {
         onChange={handleFileChange}
       />
       <div
-        {...getRootProps()}
         onClick={openFilePicker}
         onKeyDown={handleKeyDown}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         role="button"
         tabIndex={0}
         className={`relative border-2 border-dashed p-16 text-center cursor-pointer transition-all duration-300 ${
-          isActive
+          dragOver
             ? "border-black bg-stone-50 scale-[1.01]"
             : "border-stone-300 hover:border-black hover:bg-stone-50"
         } ${error ? "border-red-400" : ""}`}
       >
         <div className="flex flex-col items-center gap-4">
           <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
-            isActive
+            dragOver
               ? "bg-black text-white border-black scale-110"
               : "bg-white text-stone-400 border-stone-300 hover:border-black"
           }`}>
@@ -140,9 +142,9 @@ export default function FileUpload() {
           </div>
           <div>
             <p className={`text-sm font-medium transition-colors duration-300 ${
-              isActive ? "text-black" : "text-stone-600"
+              dragOver ? "text-black" : "text-stone-600"
             }`}>
-              {isActive
+              {dragOver
                 ? "Suelta tu PDF aquí"
                 : "Arrastra tu PDF o haz clic"}
             </p>
