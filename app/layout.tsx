@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "@fontsource/playfair-display/700.css";
 import "@fontsource/playfair-display/600.css";
 import "./globals.css";
+import PostHogProvider from "@/components/posthog-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -123,7 +124,9 @@ export default function RootLayout({
         />
         <link rel="canonical" href={siteUrl} />
       </head>
-      <body className="min-h-full flex flex-col bg-white">{children}</body>
+      <body className="min-h-full flex flex-col bg-white">
+        <PostHogProvider>{children}</PostHogProvider>
+      </body>
     </html>
   );
 }
