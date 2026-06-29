@@ -34,6 +34,15 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
+    if ((err.message || "").includes("No AI API key configured")) {
+      return NextResponse.json(
+        {
+          error:
+            "No hay API key configurada. El administrador debe configurar OPENROUTER_API_KEY o GROQ_API_KEY en las variables de entorno de Vercel.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: "Error al generar el resumen. Intenta de nuevo." },
       { status: 500 }
