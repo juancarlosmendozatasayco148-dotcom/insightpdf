@@ -123,6 +123,7 @@ export default function RootLayout({
           }}
         />
         <link rel="canonical" href={siteUrl} />
+        <meta name="google-site-verification" content="1vaiyvbbnm4EIkJcQywHncHZN8tqPNoIk4cTYuwKMt8" />
       </head>
       <body className="min-h-full flex flex-col bg-white">
         <PostHogProvider>{children}</PostHogProvider>
