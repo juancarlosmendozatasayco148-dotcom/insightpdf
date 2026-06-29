@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
 export default function FileUpload() {
   const router = useRouter();
+  const uid = useId();
+  const inputId = `pdf-${uid}`;
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -46,21 +48,24 @@ export default function FileUpload() {
     noKeyboard: true,
   });
 
-  const openFilePicker = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".pdf";
-    input.onchange = (e: Event) => {
-      const selected = (e.target as HTMLInputElement).files?.[0];
-      if (selected) acceptFile(selected);
-    };
-    input.click();
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) acceptFile(selected);
+    e.target.value = "";
   }, [acceptFile]);
 
+  const openFilePicker = useCallback(() => {
+    const el = document.getElementById(inputId);
+    if (el) el.click();
+  }, [inputId]);
+
   useEffect(() => {
-    if (window.location.hash === "#upload") {
-      setTimeout(openFilePicker, 500);
-    }
+    const checkHash = () => {
+      if (window.location.hash === "#upload") openFilePicker();
+    };
+    checkHash();
+    window.addEventListener("hashchange", checkHash);
+    return () => window.removeEventListener("hashchange", checkHash);
   }, [openFilePicker]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -104,6 +109,13 @@ export default function FileUpload() {
 
   return (
     <div className="w-full max-w-xl mx-auto">
+      <input
+        id={inputId}
+        type="file"
+        accept=".pdf"
+        className="sr-only"
+        onChange={handleFileChange}
+      />
       <div
         {...getRootProps()}
         onClick={openFilePicker}
