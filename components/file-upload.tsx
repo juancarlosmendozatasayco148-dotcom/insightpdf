@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
 export default function FileUpload() {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -40,6 +41,16 @@ export default function FileUpload() {
     onDragEnter: () => setDragOver(true),
     onDragLeave: () => setDragOver(false),
   });
+
+  useEffect(() => {
+    if (window.location.hash === "#upload") {
+      setTimeout(() => inputRef.current?.click(), 500);
+    }
+  }, []);
+
+  const handleClick = useCallback(() => {
+    inputRef.current?.click();
+  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -83,12 +94,12 @@ export default function FileUpload() {
             : "border-stone-300 hover:border-black hover:bg-stone-50"
         } ${error ? "border-red-400" : ""}`}
       >
-        <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-4 pointer-events-none">
+        <input ref={inputRef} {...getInputProps()} />
+        <div className="flex flex-col items-center gap-4">
           <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
             isActive
               ? "bg-black text-white border-black scale-110"
-              : "bg-white text-stone-400 border-stone-300 group-hover:border-black"
+              : "bg-white text-stone-400 border-stone-300 hover:border-black"
           }`}>
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
