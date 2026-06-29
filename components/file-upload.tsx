@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/utils";
 
 export default function FileUpload() {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -33,6 +32,7 @@ export default function FileUpload() {
     getRootProps,
     getInputProps,
     isDragActive,
+    open,
   } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"] },
@@ -44,13 +44,9 @@ export default function FileUpload() {
 
   useEffect(() => {
     if (window.location.hash === "#upload") {
-      setTimeout(() => inputRef.current?.click(), 500);
+      setTimeout(() => open(), 500);
     }
-  }, []);
-
-  const handleClick = useCallback(() => {
-    inputRef.current?.click();
-  }, []);
+  }, [open]);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -87,14 +83,14 @@ export default function FileUpload() {
   return (
     <div className="w-full max-w-xl mx-auto">
       <div
-        {...getRootProps()}
+        {...getRootProps({ onClick: () => open() })}
         className={`relative border-2 border-dashed p-16 text-center cursor-pointer transition-all duration-300 ${
           isActive
             ? "border-black bg-stone-50 scale-[1.01]"
             : "border-stone-300 hover:border-black hover:bg-stone-50"
         } ${error ? "border-red-400" : ""}`}
       >
-        <input ref={inputRef} {...getInputProps()} />
+        <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-4">
           <div className={`w-14 h-14 rounded border flex items-center justify-center transition-all duration-300 ${
             isActive
